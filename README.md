@@ -1,4 +1,4 @@
-# API de Upload de Arquivos
+# Banco de dados relacionado a arquivos JS
 
 Esta API permite o upload, exclusão, visualização e gerenciamento de arquivos e metadados relacionados.
 
