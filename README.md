@@ -1,173 +1,247 @@
-````markdown
-# File Upload API
+# API de Upload de Arquivos
 
-Este projeto é uma API desenvolvida com Express.js para gerenciar uploads de arquivos e suas informações associadas. A API suporta operações CRUD para registros e manipulação de arquivos.
+Esta API permite o upload, exclusão, visualização e gerenciamento de arquivos e metadados relacionados.
 
-## Funcionalidades
+## Requisitos
 
-- **Upload de Arquivos:** Envia arquivos para o servidor e salva metadados relacionados.
-- **Exclusão de Arquivos e Metadados:** Remove arquivos e suas entradas associadas de metadados.
-- **Criação de Registros:** Adiciona registros em pastas específicas.
-- **Atualização de Registros:** Atualiza registros existentes em pastas específicas.
-- **Filtragem de Registros:** Filtra registros com base em condições especificadas.
-- **Deleção de Registros:** Remove registros específicos de uma pasta.
+- Node.js
+- Express
+- Multer
+- fs-extra
+- path
+- url
 
-## Instalação
+## Endpoints
 
-1. Clone o repositório:
-   ```bash
-   git clone https://github.com/usuario/repo.git
-   ```
-2. Navegue para o diretório do projeto:
-   ```bash
-   cd repo
-   ```
+### 1. **Upload de Arquivos**
+
+- **URL:** `/upload`
+- **Método:** `POST`
+- **Descrição:** Faz o upload de um arquivo e registra seus metadados.
+- **Body:**
+  - `file`: Arquivo a ser enviado.
+  - Metadados do arquivo (JSON).
+
+**Exemplo de Request:**
+
+```http
+POST /upload
+Content-Type: multipart/form-data
+
+--boundary
+Content-Disposition: form-data; name="file"; filename="example.pdf"
+Content-Type: application/pdf
+
+(binary data)
+
+--boundary
+Content-Disposition: form-data; name="metadata"
+
+{
+    "description": "Example file",
+    "author": "John Doe"
+}
+--boundary--
+```
+
+**Resposta de Sucesso:**
+
+```json
+{
+  "message": "Upload e registro concluídos com sucesso"
+}
+```
+
+### 2. **Excluir Upload e Dados**
+
+- **URL:** `/upload/:filename`
+- **Método:** `DELETE`
+- **Descrição:** Remove o arquivo e seus metadados com base no nome do arquivo.
+- **Parâmetros da URL:**
+  - `filename`: Nome do arquivo a ser excluído.
+
+**Exemplo de Request:**
+
+```http
+DELETE /upload/example.pdf
+```
+
+**Resposta de Sucesso:**
+
+```json
+{
+  "message": "Upload e dados excluídos com sucesso"
+}
+```
+
+### 3. **Listar Todos os Uploads**
+
+- **URL:** `/listalluploads`
+- **Método:** `GET`
+- **Descrição:** Retorna todos os metadados dos arquivos carregados.
+- **Resposta:**
+
+```json
+[
+    {
+        "description": "Example file",
+        "author": "John Doe",
+        "filename": "example.pdf",
+        "path": "relative/path/to/example.pdf",
+        "uploadDate": "2024-07-26T14:30:00.000Z",
+        "id": 1234567890
+    },
+    ...
+]
+```
+
+### 4. **Criar um Registro**
+
+- **URL:** `/data/:folder`
+- **Método:** `POST`
+- **Descrição:** Cria um novo registro em uma pasta especificada.
+- **Parâmetros da URL:**
+  - `folder`: Nome da pasta onde o registro será salvo.
+- **Body:**
+  - Dados do novo registro (JSON).
+
+**Exemplo de Request:**
+
+```http
+POST /data/foldername
+Content-Type: application/json
+
+{
+    "name": "New Record",
+    "value": "Some value"
+}
+```
+
+**Resposta de Sucesso:**
+
+```json
+{
+  "message": "Registro criado com sucesso",
+  "data": {
+    "name": "New Record",
+    "value": "Some value",
+    "id": 1678901234567
+  }
+}
+```
+
+### 5. **Atualizar um Registro**
+
+- **URL:** `/data/:folder/:id`
+- **Método:** `PUT`
+- **Descrição:** Atualiza um registro existente em uma pasta especificada.
+- **Parâmetros da URL:**
+  - `folder`: Nome da pasta onde o registro está localizado.
+  - `id`: ID do registro a ser atualizado.
+- **Body:**
+  - Dados atualizados (JSON).
+
+**Exemplo de Request:**
+
+```http
+PUT /data/foldername/1678901234567
+Content-Type: application/json
+
+{
+    "name": "Updated Record",
+    "value": "Updated value"
+}
+```
+
+**Resposta de Sucesso:**
+
+```json
+{
+  "message": "Registro atualizado com sucesso",
+  "data": {
+    "name": "Updated Record",
+    "value": "Updated value",
+    "id": 1678901234567
+  }
+}
+```
+
+### 6. **Filtrar Registros**
+
+- **URL:** `/data/:folder/filter`
+- **Método:** `POST`
+- **Descrição:** Filtra registros por parâmetros complexos.
+- **Parâmetros da URL:**
+  - `folder`: Nome da pasta onde os registros estão localizados.
+- **Body:**
+  - `filters`: Filtros para a busca (JSON).
+
+**Exemplo de Request:**
+
+```http
+POST /data/foldername/filter
+Content-Type: application/json
+
+{
+    "filters": [
+        { "filtro": "name", "condicao": "indexOf", "valorprocurado": "Updated" }
+    ]
+}
+```
+
+**Resposta de Sucesso:**
+
+```json
+[
+  {
+    "name": "Updated Record",
+    "value": "Updated value",
+    "id": 1678901234567
+  }
+]
+```
+
+### 7. **Deletar um Registro**
+
+- **URL:** `/data/:folder/:id`
+- **Método:** `DELETE`
+- **Descrição:** Deleta um registro por ID em uma pasta especificada.
+- **Parâmetros da URL:**
+  - `folder`: Nome da pasta onde o registro está localizado.
+  - `id`: ID do registro a ser deletado.
+
+**Exemplo de Request:**
+
+```http
+DELETE /data/foldername/1678901234567
+```
+
+**Resposta de Sucesso:**
+
+```json
+{
+  "message": "Registro deletado com sucesso"
+}
+```
+
+## Como Executar o Servidor
+
+1. Clone o repositório.
+2. Navegue até a pasta do projeto.
 3. Instale as dependências:
+
    ```bash
    npm install
    ```
 
-## Uso
+4. Inicie o servidor:
 
-### Iniciar o Servidor
-
-Para iniciar o servidor, use o comando:
-
-```bash
-npm start
-```
-````
-
-O servidor irá rodar na porta 4001.
-
-### Endpoints
-
-#### **POST** `/upload`
-
-Faz o upload de um arquivo e salva os metadados.
-
-**Exemplo de Requisição:**
-
-```bash
-curl -X POST http://localhost:4001/upload \
-  -H "Content-Type: multipart/form-data" \
-  -F "file=@/caminho/para/seu/arquivo.ext" \
-  -F "nome=teste" \
-  -F "dados=dados2"
-```
-
-**Body:** FormData com o campo `file` e metadados em JSON.
-
-#### **DELETE** `/upload/:filename`
-
-Remove um arquivo e seus metadados associados.
-
-**Exemplo de Requisição:**
-
-```bash
-curl -X DELETE http://localhost:4001/upload/nomeDoArquivo.ext
-```
-
-**Params:**
-
-- `filename`: Nome do arquivo a ser excluído.
-
-#### **POST** `/data/:folder`
-
-Cria um novo registro na pasta especificada.
-
-**Exemplo de Requisição:**
-
-```bash
-curl -X POST http://localhost:4001/data/minhaPasta \
-  -H "Content-Type: application/json" \
-  -d '{"nome": "teste", "dados": "dados2"}'
-```
-
-**Body:** JSON com os dados do novo registro.
-
-#### **PUT** `/data/:folder/:id`
-
-Atualiza um registro existente na pasta especificada.
-
-**Exemplo de Requisição:**
-
-```bash
-curl -X PUT http://localhost:4001/data/minhaPasta/123456789 \
-  -H "Content-Type: application/json" \
-  -d '{"nome": "teste atualizado", "dados": "dados atualizados"}'
-```
-
-**Params:**
-
-- `folder`: Nome da pasta.
-- `id`: ID do registro a ser atualizado.
-
-**Body:** JSON com os dados atualizados.
-
-#### **POST** `/data/:folder/filter`
-
-Filtra registros com base em parâmetros especificados.
-
-**Exemplo de Requisição:**
-
-```bash
-curl -X POST http://localhost:4001/data/minhaPasta/filter \
-  -H "Content-Type: application/json" \
-  -d '{
-        "filters": [
-            {"filtro": "nome", "condicao": "indexOf", "valorprocurado": "teste"}
-        ]
-    }'
-```
-
-**Body:**
-
-```json
-{
-  "filters": [
-    { "filtro": "campo", "condicao": "indexOf", "valorprocurado": "valor" }
-  ]
-}
-```
-
-#### **DELETE** `/data/:folder/:id`
-
-Deleta um registro específico da pasta especificada.
-
-**Exemplo de Requisição:**
-
-```bash
-curl -X DELETE http://localhost:4001/data/minhaPasta/123456789
-```
-
-**Params:**
-
-- `folder`: Nome da pasta.
-- `id`: ID do registro a ser deletado.
-
-## Contribuição
-
-1. Faça um fork do repositório.
-2. Crie uma branch para suas alterações:
    ```bash
-   git checkout -b minha-alteracao
+   npm start
    ```
-3. Faça commit das suas alterações:
-   ```bash
-   git commit -am 'Adiciona uma nova funcionalidade'
-   ```
-4. Faça push para o repositório remoto:
-   ```bash
-   git push origin minha-alteracao
-   ```
-5. Abra um Pull Request.
 
-## Licença
+O servidor estará disponível em `http://localhost:4001`.
 
-Este projeto está licenciado sob a Licença MIT - veja o arquivo [LICENSE](LICENSE) para detalhes.
+---
 
-```
-
-Essa versão inclui exemplos de como fazer requisições para cada uma das rotas da API. Se precisar de mais detalhes ou ajustes, me avise!
-```
+Sinta-se à vontade para ajustar qualquer informação conforme necessário. Se precisar de mais alguma coisa, é só avisar!

@@ -10,6 +10,7 @@ const app = express();
 const port = 4001;
 
 app.use(express.json());
+app.use('/uploads', express.static(path.join(__dirname, 'db/uploads')));
 
 // Configuração do multer para upload de arquivos
 const storage = multer.diskStorage({
@@ -50,6 +51,7 @@ app.post('/upload', upload.single('file'), async (req, res) => {
             filename: file.originalname,
             path: path.relative(__dirname, file.path),
             uploadDate: new Date(),
+            type: file.originalname.split('.')[1],
             id
         };
         arquivoAnteriorDados.push(newEntry);
@@ -96,6 +98,12 @@ app.delete('/upload/:filename', async (req, res) => {
         res.status(500).json({ message: 'Erro ao excluir o upload e os dados', error });
     }
 });
+
+app.get('/listalluploads', async (req, res) => {
+    let dados = fs.readFileSync('./db/uploads/data.json', 'utf-8')
+    dados = JSON.parse(dados)
+    res.send(dados)
+})
 
 // Rota para criar um registro em uma pasta especificada
 app.post('/data/:folder', async (req, res) => {
