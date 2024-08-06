@@ -181,47 +181,71 @@ app.post('/data/:folder', authenticateToken, async (req, res) => {
 
 // Rota para atualizar um registro em uma pasta especificada (protegida)
 app.put('/data/:folder/:id', authenticateToken, async (req, res) => {
+    //caso envie o comando {"chave": "-remove-"} será removido 
     let { folder, id } = req.params;
     id = parseInt(id);
-    const updatedItem = req.body;
+    const updatedItem = req.body; // Campos que serão atualizados
     const folderPath = path.join(__dirname, './db/' + folder);
     const filePath = path.join(folderPath, 'data.json');
 
     try {
+        // Verificar se o arquivo de dados existe
         if (!(await fs.pathExists(filePath))) {
             return res.status(404).json({ message: 'Arquivo de dados não encontrado' });
         }
 
+        // Ler os dados existentes
         let data = await fs.readJson(filePath);
         const index = data.findIndex(item => item.id === id);
 
+        // Verificar se o registro existe
         if (index === -1) {
             return res.status(404).json({ message: 'Registro não encontrado' });
         }
 
-        data[index] = { ...data[index], ...updatedItem };
+        // Garantir que o campo `id` não seja alterado
+        if (updatedItem.id) {
+            return res.status(400).json({ message: 'O campo "id" não pode ser atualizado' });
+        }
+
+        // Atualizar ou remover campos conforme o corpo da requisição
+        for (const key in updatedItem) {
+            if (updatedItem[key] === "-remove-") {
+                // Verificar se a chave existe antes de tentar removê-la
+                if (data[index].hasOwnProperty(key)) {
+                    delete data[index][key];
+                } else {
+                    return res.status(400).json({ message: `Chave "${key}" não encontrada para remoção` });
+                }
+            } else {
+                data[index][key] = updatedItem[key];
+            }
+        }
+
+        // Salvar os dados atualizados
         await fs.writeJson(filePath, data);
 
+        // Responder com sucesso e os dados atualizados
         res.json({ message: 'Registro atualizado com sucesso', data: data[index] });
     } catch (error) {
         res.status(500).json({ message: 'Erro ao atualizar registro', error });
     }
 });
 
-// Rota para filtrar registros por parâmetros complexos (protegida)
-app.post('/data/:folder/filter', authenticateToken, async (req, res) => {
+// Rota para filtrar registros por parâmetros complexos (protegida) com paginação
+app.post('/data/:folder/filter/:page?/:limit?', authenticateToken, async (req, res) => {
     const { folder } = req.params;
     const { filters } = req.body;
+    const { page = 1 } = req.params;
+    const limit = parseInt(req.params.limit) || 20
     const folderPath = path.join(__dirname, './db/' + folder);
     const filePath = path.join(folderPath, 'data.json');
-
     try {
         if (!(await fs.pathExists(filePath))) {
             return res.status(404).json({ message: 'Arquivo de dados não encontrado' });
         }
-
         let data = await fs.readJson(filePath);
-
+        // Filtrar os dados conforme os filtros fornecidos
         const filteredData = data.filter(item => {
             return filters.every(({ filtro, condicao, valorprocurado }) => {
                 switch (condicao) {
@@ -237,11 +261,37 @@ app.post('/data/:folder/filter', authenticateToken, async (req, res) => {
             });
         });
 
-        res.json(filteredData);
+        // Paginação
+        const totalItems = filteredData.length;
+        const totalPages = Math.ceil(totalItems / limit);
+        const currentPage = parseInt(page, 10);
+        const startIndex = (currentPage - 1) * limit;
+        const endIndex = Math.min(startIndex + limit, totalItems);
+
+        const paginatedData = filteredData.slice(startIndex, endIndex);
+
+        // Criar URLs de paginação
+        const baseUrl = req.protocol + '://' + req.get('host') + req.originalUrl;
+        const createPageUrl = (pageNum) => `../${pageNum}/${limit}`;
+
+        const pagination = {
+            currentPage,
+            totalPages,
+            totalItems,
+            limit,
+            previousPage: currentPage > 1 ? createPageUrl(currentPage - 1) : null,
+            nextPage: currentPage < totalPages ? createPageUrl(currentPage + 1) : null
+        };
+
+        res.json({
+            pagination,
+            data: paginatedData
+        });
     } catch (error) {
         res.status(500).json({ message: 'Erro ao filtrar registros', error });
     }
 });
+
 
 // Rota para deletar um registro por ID em uma pasta especificada (protegida)
 app.delete('/data/:folder/:id', authenticateToken, async (req, res) => {
